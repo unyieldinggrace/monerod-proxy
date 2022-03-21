@@ -1,18 +1,16 @@
 package main
 
 import (
-	"context"
 	"digitalcashtools/monerod-proxy/endpoints"
 	"fmt"
+	"net/http"
 	"os"
 
-	"github.com/carlmjohnson/requests"
 	"github.com/labstack/echo/v4"
 	"gopkg.in/ini.v1"
 )
 
 func main() {
-	// loadURL()
 	cfg, err := ini.Load("config.ini")
 	if err != nil {
 		fmt.Printf("Failed to read config.ini")
@@ -23,22 +21,25 @@ func main() {
 	fmt.Println("Port from config: ", http_port)
 
 	e := echo.New()
+	// e.Use(middleware.BodyDump(func(c echo.Context, reqBody, resBody []byte) {
+	// 	fmt.Println("Request Body Dump")
+	// 	fmt.Println(string(reqBody))
+	// }))
 	endpoints.ConfigurePing(e)
-	endpoints.ConfigureMonerodProxyHandler(e)
+	endpoints.ConfigureMonerodProxyHandler(e, cfg)
+
+	e.GET("*", func(c echo.Context) error {
+		reqDump := "GET Request received: " + c.Path() + c.QueryString()
+		fmt.Println(reqDump)
+		return c.String(http.StatusOK, reqDump)
+	})
+
+	e.POST("*", func(c echo.Context) error {
+		reqDump := "POST Request received: " + c.Path() + c.QueryString()
+		fmt.Println(reqDump)
+		return c.String(http.StatusOK, reqDump)
+	})
 
 	fmt.Println("Server running, test by visiting localhost:", http_port, "/ping")
 	e.Logger.Fatal(e.Start(":" + http_port))
-}
-
-func loadURL() {
-	var content string
-	err := requests.URL("https://www.digitalcashtools.com").
-		ToString(&content).
-		Fetch(context.Background())
-
-	if err != nil {
-		fmt.Println("Error encountered")
-	}
-
-	fmt.Println(content)
 }
