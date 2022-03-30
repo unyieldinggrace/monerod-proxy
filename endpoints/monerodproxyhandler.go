@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"gopkg.in/ini.v1"
@@ -12,7 +13,7 @@ import (
 
 func ConfigureMonerodProxyHandler(e *echo.Echo, cfg *ini.File) {
 	e.GET(":monerodendpoint", func(c echo.Context) error {
-		fmt.Print("GET Request Received: " + c.Param("monerodendpoint"))
+		fmt.Print(time.Now().Format(time.RFC3339) + "\tGET Request Received: " + c.Param("monerodendpoint"))
 		baseURL := cfg.Section("").Key("node").Value()
 		resp, httpStatus := forwardGETRequest(baseURL + c.Param("monerodendpoint"))
 		fmt.Println("\tResponse Code: ", httpStatus)
@@ -23,7 +24,7 @@ func ConfigureMonerodProxyHandler(e *echo.Echo, cfg *ini.File) {
 		requestBody, err := ioutil.ReadAll(c.Request().Body)
 
 		//reqDump := "POST Request received: " + c.Param("monerodendpoint") + "\n" + string(requestBody)
-		reqDump := "POST Request received: " + c.Param("monerodendpoint")
+		reqDump := time.Now().Format(time.RFC3339) + "\tPOST Request received: " + c.Param("monerodendpoint")
 		fmt.Print(reqDump)
 
 		if err != nil {

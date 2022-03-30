@@ -10,7 +10,7 @@ type NodeInfo struct {
 
 type NodeProvider struct {
 	SelectedNodeIndex int
-	Nodes NodeInfo[]
+	Nodes             []NodeInfo
 }
 
 func (nodeProvider NodeProvider) getBaseURL() string {

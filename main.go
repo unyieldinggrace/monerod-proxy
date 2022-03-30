@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"gopkg.in/ini.v1"
@@ -29,13 +30,13 @@ func main() {
 	endpoints.ConfigureMonerodProxyHandler(e, cfg)
 
 	e.GET("*", func(c echo.Context) error {
-		reqDump := "GET Request received: " + c.Path() + c.QueryString()
+		reqDump := time.Now().Format(time.RFC822) + "\tGET Request received: " + c.Path() + c.QueryString()
 		fmt.Println(reqDump)
 		return c.String(http.StatusOK, reqDump)
 	})
 
 	e.POST("*", func(c echo.Context) error {
-		reqDump := "POST Request received: " + c.Path() + c.QueryString()
+		reqDump := time.Now().Format(time.RFC822) + "\tPOST Request received: " + c.Path() + c.QueryString()
 		fmt.Println(reqDump)
 		return c.String(http.StatusOK, reqDump)
 	})
