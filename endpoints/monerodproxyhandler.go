@@ -1,6 +1,8 @@
 package endpoints
 
 import (
+	"digitalcashtools/monerod-proxy/nodemanagement"
+
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -8,13 +10,12 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"gopkg.in/ini.v1"
 )
 
-func ConfigureMonerodProxyHandler(e *echo.Echo, cfg *ini.File) {
+func ConfigureMonerodProxyHandler(e *echo.Echo, nodeProvider nodemanagement.INodeProvider) {
 	e.GET(":monerodendpoint", func(c echo.Context) error {
-		fmt.Print(time.Now().Format(time.RFC3339) + "\tGET Request Received: " + c.Param("monerodendpoint"))
-		baseURL := cfg.Section("").Key("node").Value()
+		fmt.Print(time.Now().Format(time.RFC3339) + " GET Request Received: " + c.Param("monerodendpoint"))
+		baseURL := nodeProvider.GetBaseURL()
 		resp, httpStatus := forwardGETRequest(baseURL + c.Param("monerodendpoint"))
 		fmt.Println("\tResponse Code: ", httpStatus)
 		return c.String(httpStatus, resp)
@@ -24,7 +25,7 @@ func ConfigureMonerodProxyHandler(e *echo.Echo, cfg *ini.File) {
 		requestBody, err := ioutil.ReadAll(c.Request().Body)
 
 		//reqDump := "POST Request received: " + c.Param("monerodendpoint") + "\n" + string(requestBody)
-		reqDump := time.Now().Format(time.RFC3339) + "\tPOST Request received: " + c.Param("monerodendpoint")
+		reqDump := time.Now().Format(time.RFC3339) + " POST Request received: " + c.Param("monerodendpoint")
 		fmt.Print(reqDump)
 
 		if err != nil {
@@ -32,7 +33,7 @@ func ConfigureMonerodProxyHandler(e *echo.Echo, cfg *ini.File) {
 			return c.String(http.StatusBadRequest, reqDump)
 		}
 
-		baseURL := cfg.Section("").Key("node").Value()
+		baseURL := nodeProvider.GetBaseURL()
 		resp, httpStatus := forwardPOSTRequest(baseURL+c.Param("monerodendpoint"), requestBody)
 		fmt.Println("\tResponse Code: ", httpStatus)
 		return c.String(httpStatus, resp)

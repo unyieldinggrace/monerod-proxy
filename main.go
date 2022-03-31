@@ -2,6 +2,7 @@ package main
 
 import (
 	"digitalcashtools/monerod-proxy/endpoints"
+	"digitalcashtools/monerod-proxy/nodemanagement"
 	"fmt"
 	"net/http"
 	"os"
@@ -27,16 +28,22 @@ func main() {
 	// 	fmt.Println(string(reqBody))
 	// }))
 	endpoints.ConfigurePing(e)
-	endpoints.ConfigureMonerodProxyHandler(e, cfg)
+	// endpoints.ConfigureMonerodProxyHandler(e, cfg)
+
+	// Create NodeProvider instance
+	// Load nodes from config
+	// Start timer to periodically run node health checks
+	//
+	endpoints.ConfigureMonerodProxyHandler(e, nodemanagement.LoadNodeProviderFromConfig(cfg))
 
 	e.GET("*", func(c echo.Context) error {
-		reqDump := time.Now().Format(time.RFC822) + "\tGET Request received: " + c.Path() + c.QueryString()
+		reqDump := time.Now().Format(time.RFC3339) + " GET Request received: " + c.Path() + c.QueryString()
 		fmt.Println(reqDump)
 		return c.String(http.StatusOK, reqDump)
 	})
 
 	e.POST("*", func(c echo.Context) error {
-		reqDump := time.Now().Format(time.RFC822) + "\tPOST Request received: " + c.Path() + c.QueryString()
+		reqDump := time.Now().Format(time.RFC3339) + " POST Request received: " + c.Path() + c.QueryString()
 		fmt.Println(reqDump)
 		return c.String(http.StatusOK, reqDump)
 	})
