@@ -11,6 +11,7 @@ type INodeProvider interface {
 	GetBaseURL() string
 	GetAnyNodesAvailable() bool
 	ReportNodeConnectionFailure()
+	CheckNodeHealth()
 }
 
 type NodeInfo struct {
@@ -32,7 +33,7 @@ func (nodeProvider *NodeProvider) GetAnyNodesAvailable() bool {
 	return nodeProvider.AnyNodesAvailable
 }
 
-func (nodeProvider *NodeProvider) checkNodeHealth() {
+func (nodeProvider *NodeProvider) CheckNodeHealth() {
 	for i := 0; i < len(nodeProvider.Nodes); i++ {
 		_, statusCode, err := httpclient.ExecuteGETRequest(nodeProvider.Nodes[i].URL + "get_height")
 
@@ -64,7 +65,7 @@ func (nodeProvider *NodeProvider) checkNodeHealth() {
 }
 
 func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
-	nodeInfoSlice := []NodeInfo{}
+	nodes := []NodeInfo{}
 	nodeURLs := cfg.Section("").Key("node").Strings(",")
 	fmt.Println(nodeURLs)
 
@@ -76,17 +77,14 @@ func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
 			PassedLastCheck: true,
 		}
 
-		nodeInfoSlice = append(nodeInfoSlice, nodeInfo)
+		nodes = append(nodes, nodeInfo)
 	}
 
 	nodeProvider := &NodeProvider{
 		SelectedNodeIndex: 0,
-		Nodes:             nodeInfoSlice,
+		Nodes:             nodes,
 		AnyNodesAvailable: false,
 	}
-
-	nodeProvider.checkNodeHealth()
-	fmt.Println("Selected node: ", nodeProvider.GetBaseURL())
 
 	return nodeProvider
 }
@@ -94,7 +92,7 @@ func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
 func (nodeProvider *NodeProvider) ReportNodeConnectionFailure() {
 	fmt.Println("Detected node failure:\t", nodeProvider.GetBaseURL())
 
-	nodeProvider.checkNodeHealth()
+	nodeProvider.CheckNodeHealth()
 
 	if nodeProvider.GetAnyNodesAvailable() {
 		fmt.Println("Switched to node:\t", nodeProvider.GetBaseURL())

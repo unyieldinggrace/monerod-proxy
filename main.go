@@ -29,8 +29,14 @@ func main() {
 	// }))
 
 	endpoints.ConfigurePing(e)
-	endpoints.ConfigureMonerodProxyHandler(e, nodemanagement.LoadNodeProviderFromConfig(cfg))
-	// Start timer to periodically run node health checks
+
+	nodeProvider := nodemanagement.LoadNodeProviderFromConfig(cfg)
+	endpoints.ConfigureMonerodProxyHandler(e, nodeProvider)
+
+	setUpNodeHealthCheckTicker(cfg, nodeProvider)
+
+	nodeProvider.CheckNodeHealth()
+	fmt.Println("Selected node: ", nodeProvider.GetBaseURL())
 
 	e.GET("*", func(c echo.Context) error {
 		reqDump := time.Now().Format(time.RFC3339) + " GET Request received: " + c.Path() + c.QueryString()
@@ -46,4 +52,23 @@ func main() {
 
 	fmt.Println("Server running, test by visiting localhost:", http_port, "/ping")
 	e.Logger.Fatal(e.Start(":" + http_port))
+}
+
+func setUpNodeHealthCheckTicker(cfg *ini.File, nodeProvider nodemanagement.INodeProvider) {
+	secondsBetweenHealthChecks, err := cfg.Section("").Key("seconds_between_health_checks").Int()
+	if err != nil {
+		secondsBetweenHealthChecks = 10 * 60
+	}
+
+	fmt.Println("Performing node health check every ", secondsBetweenHealthChecks, " seconds")
+
+	healthCheckTicker := time.NewTicker(time.Duration(secondsBetweenHealthChecks) * time.Second)
+
+	go func() {
+		for {
+			<-healthCheckTicker.C
+			fmt.Println("Checking node health...")
+			nodeProvider.CheckNodeHealth()
+		}
+	}()
 }
