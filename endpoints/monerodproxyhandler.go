@@ -1,9 +1,9 @@
 package endpoints
 
 import (
+	"digitalcashtools/monerod-proxy/httpclient"
 	"digitalcashtools/monerod-proxy/nodemanagement"
 
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,19 +14,29 @@ import (
 
 func ConfigureMonerodProxyHandler(e *echo.Echo, nodeProvider nodemanagement.INodeProvider) {
 	e.GET(":monerodendpoint", func(c echo.Context) error {
-		fmt.Print(time.Now().Format(time.RFC3339) + " GET Request Received: " + c.Param("monerodendpoint"))
+		if !nodeProvider.GetAnyNodesAvailable() {
+			return getNoNodesAvailableResponse(c)
+		}
+
 		baseURL := nodeProvider.GetBaseURL()
-		resp, httpStatus := forwardGETRequest(baseURL + c.Param("monerodendpoint"))
-		fmt.Println("\tResponse Code: ", httpStatus)
+		resp, httpStatus, err := forwardGETRequest(baseURL + c.Param("monerodendpoint"))
+		if err != nil {
+			nodeProvider.ReportNodeConnectionFailure()
+		}
+
+		fmt.Println(time.Now().Format(time.RFC3339)+" GET Request Received: "+c.Param("monerodendpoint")+"\tResponse Code: ", httpStatus)
 		return c.String(httpStatus, resp)
 	})
 
 	e.POST(":monerodendpoint", func(c echo.Context) error {
+		if !nodeProvider.GetAnyNodesAvailable() {
+			return getNoNodesAvailableResponse(c)
+		}
+
 		requestBody, err := ioutil.ReadAll(c.Request().Body)
 
 		//reqDump := "POST Request received: " + c.Param("monerodendpoint") + "\n" + string(requestBody)
 		reqDump := time.Now().Format(time.RFC3339) + " POST Request received: " + c.Param("monerodendpoint")
-		fmt.Print(reqDump)
 
 		if err != nil {
 			fmt.Println(err)
@@ -34,33 +44,24 @@ func ConfigureMonerodProxyHandler(e *echo.Echo, nodeProvider nodemanagement.INod
 		}
 
 		baseURL := nodeProvider.GetBaseURL()
-		resp, httpStatus := forwardPOSTRequest(baseURL+c.Param("monerodendpoint"), requestBody)
-		fmt.Println("\tResponse Code: ", httpStatus)
+		resp, httpStatus, err := forwardPOSTRequest(baseURL+c.Param("monerodendpoint"), requestBody)
+		if err != nil {
+			nodeProvider.ReportNodeConnectionFailure()
+		}
+
+		fmt.Println(reqDump, "\tResponse Code: ", httpStatus)
 		return c.String(httpStatus, resp)
 	})
 }
 
-func forwardGETRequest(URL string) (string, int) {
-	req, _ := http.NewRequest("GET", URL, nil)
-	return executeRequest(req)
+func forwardGETRequest(URL string) (string, int, error) {
+	return httpclient.ExecuteGETRequest(URL)
 }
 
-func forwardPOSTRequest(URL string, body []byte) (string, int) {
-	req, _ := http.NewRequest("POST", URL, bytes.NewBuffer(body))
-	return executeRequest(req)
+func forwardPOSTRequest(URL string, body []byte) (string, int, error) {
+	return httpclient.ExecutePOSTRequest(URL, body)
 }
 
-func executeRequest(req *http.Request) (string, int) {
-	res, _ := http.DefaultClient.Do(req)
-	if !getStatusCodeSuccessful(res) {
-		return fmt.Sprint(res.StatusCode, ": ", http.StatusText(res.StatusCode)), res.StatusCode
-	}
-	defer res.Body.Close()
-	resBody, _ := ioutil.ReadAll(res.Body)
-	// log.Printf("Response Body:\n%s", resBody)
-	return string(resBody), res.StatusCode
-}
-
-func getStatusCodeSuccessful(res *http.Response) bool {
-	return res.StatusCode >= 200 && res.StatusCode <= 299
+func getNoNodesAvailableResponse(c echo.Context) error {
+	return c.String(500, "No nodes available.")
 }

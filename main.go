@@ -27,14 +27,10 @@ func main() {
 	// 	fmt.Println("Request Body Dump")
 	// 	fmt.Println(string(reqBody))
 	// }))
-	endpoints.ConfigurePing(e)
-	// endpoints.ConfigureMonerodProxyHandler(e, cfg)
 
-	// Create NodeProvider instance
-	// Load nodes from config
-	// Start timer to periodically run node health checks
-	//
+	endpoints.ConfigurePing(e)
 	endpoints.ConfigureMonerodProxyHandler(e, nodemanagement.LoadNodeProviderFromConfig(cfg))
+	// Start timer to periodically run node health checks
 
 	e.GET("*", func(c echo.Context) error {
 		reqDump := time.Now().Format(time.RFC3339) + " GET Request received: " + c.Path() + c.QueryString()

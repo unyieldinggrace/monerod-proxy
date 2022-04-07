@@ -1,43 +1,104 @@
 package nodemanagement
 
 import (
+	"digitalcashtools/monerod-proxy/httpclient"
+	"fmt"
+
 	"gopkg.in/ini.v1"
 )
 
 type INodeProvider interface {
 	GetBaseURL() string
+	GetAnyNodesAvailable() bool
+	ReportNodeConnectionFailure()
 }
 
 type NodeInfo struct {
-	URL string
+	URL             string
+	PassedLastCheck bool
 }
 
 type NodeProvider struct {
 	SelectedNodeIndex int
 	Nodes             []NodeInfo
+	AnyNodesAvailable bool
 }
 
 func (nodeProvider *NodeProvider) GetBaseURL() string {
 	return nodeProvider.Nodes[nodeProvider.SelectedNodeIndex].URL
 }
 
-// func checkNodeHealth(nodeProvider NodeProvider) {
-//    Ping each node in nodeProvider.Nodes and set SelectedNodeIndex to the one with the best ping time.
-// }
+func (nodeProvider *NodeProvider) GetAnyNodesAvailable() bool {
+	return nodeProvider.AnyNodesAvailable
+}
+
+func (nodeProvider *NodeProvider) checkNodeHealth() {
+	for i := 0; i < len(nodeProvider.Nodes); i++ {
+		_, statusCode, err := httpclient.ExecuteGETRequest(nodeProvider.Nodes[i].URL + "get_height")
+
+		if err != nil {
+			nodeProvider.Nodes[i].PassedLastCheck = false
+			continue
+		}
+
+		if !(statusCode >= 200 && statusCode <= 299) {
+			nodeProvider.Nodes[i].PassedLastCheck = false
+			continue
+		}
+
+		nodeProvider.Nodes[i].PassedLastCheck = true
+	}
+
+	availableNodeFound := false
+	chosenNodeIndex := 0
+	for i := 0; i < len(nodeProvider.Nodes); i++ {
+		if nodeProvider.Nodes[i].PassedLastCheck {
+			chosenNodeIndex = i
+			availableNodeFound = true
+			break
+		}
+	}
+
+	nodeProvider.SelectedNodeIndex = chosenNodeIndex
+	nodeProvider.AnyNodesAvailable = availableNodeFound
+}
 
 func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
 	nodeInfoSlice := []NodeInfo{}
-	baseURL := cfg.Section("").Key("node").Value()
-	nodeInfo := NodeInfo{
-		URL: baseURL,
-	}
+	nodeURLs := cfg.Section("").Key("node").Strings(",")
+	fmt.Println(nodeURLs)
 
-	nodeInfoSlice = append(nodeInfoSlice, nodeInfo)
+	for i := 0; i < len(nodeURLs); i++ {
+		fmt.Println("Adding URL: " + nodeURLs[i])
+
+		nodeInfo := NodeInfo{
+			URL:             nodeURLs[i],
+			PassedLastCheck: true,
+		}
+
+		nodeInfoSlice = append(nodeInfoSlice, nodeInfo)
+	}
 
 	nodeProvider := &NodeProvider{
 		SelectedNodeIndex: 0,
 		Nodes:             nodeInfoSlice,
+		AnyNodesAvailable: false,
 	}
 
+	nodeProvider.checkNodeHealth()
+	fmt.Println("Selected node: ", nodeProvider.GetBaseURL())
+
 	return nodeProvider
+}
+
+func (nodeProvider *NodeProvider) ReportNodeConnectionFailure() {
+	fmt.Println("Detected node failure:\t", nodeProvider.GetBaseURL())
+
+	nodeProvider.checkNodeHealth()
+
+	if nodeProvider.GetAnyNodesAvailable() {
+		fmt.Println("Switched to node:\t", nodeProvider.GetBaseURL())
+	} else {
+		fmt.Println("All nodes failed health check, no nodes available.")
+	}
 }
