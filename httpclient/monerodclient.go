@@ -21,7 +21,7 @@ func executeRequest(req *http.Request) (string, int, error) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return "Error connecting to backend node.\n", 500, err
+		return "Monerod-proxy encountered an error connecting to a backend node. Please re-try your request and monerod-proxy will attempt to use an alternate node for fulfillment.\n", 500, err
 	}
 
 	if !getStatusCodeSuccessful(res) {
@@ -30,7 +30,6 @@ func executeRequest(req *http.Request) (string, int, error) {
 
 	defer res.Body.Close()
 	resBody, _ := ioutil.ReadAll(res.Body)
-	// log.Printf("Response Body:\n%s", resBody)
 	return string(resBody), res.StatusCode, nil
 }
 

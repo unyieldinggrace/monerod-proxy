@@ -23,11 +23,6 @@ func main() {
 	fmt.Println("Port from config: ", http_port)
 
 	e := echo.New()
-	// e.Use(middleware.BodyDump(func(c echo.Context, reqBody, resBody []byte) {
-	// 	fmt.Println("Request Body Dump")
-	// 	fmt.Println(string(reqBody))
-	// }))
-
 	endpoints.ConfigurePing(e)
 
 	nodeProvider := nodemanagement.LoadNodeProviderFromConfig(cfg)
@@ -51,6 +46,8 @@ func main() {
 	})
 
 	fmt.Println("Server running, test by visiting localhost:", http_port, "/ping")
+
+	// TODO: Add TLS support
 	e.Logger.Fatal(e.Start(":" + http_port))
 }
 
@@ -60,7 +57,7 @@ func setUpNodeHealthCheckTicker(cfg *ini.File, nodeProvider nodemanagement.INode
 		secondsBetweenHealthChecks = 10 * 60
 	}
 
-	fmt.Println("Performing node health check every ", secondsBetweenHealthChecks, " seconds")
+	fmt.Println("Performing node health check every", secondsBetweenHealthChecks, "seconds")
 
 	healthCheckTicker := time.NewTicker(time.Duration(secondsBetweenHealthChecks) * time.Second)
 
@@ -68,7 +65,16 @@ func setUpNodeHealthCheckTicker(cfg *ini.File, nodeProvider nodemanagement.INode
 		for {
 			<-healthCheckTicker.C
 			fmt.Println("Checking node health...")
+
+			previousNode := nodeProvider.GetBaseURL()
+
 			nodeProvider.CheckNodeHealth()
+
+			newSelectedNode := nodeProvider.GetBaseURL()
+
+			if newSelectedNode != previousNode {
+				fmt.Println("Switched to new node:", newSelectedNode)
+			}
 		}
 	}()
 }

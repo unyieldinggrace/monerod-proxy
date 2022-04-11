@@ -34,8 +34,6 @@ func ConfigureMonerodProxyHandler(e *echo.Echo, nodeProvider nodemanagement.INod
 		}
 
 		requestBody, err := ioutil.ReadAll(c.Request().Body)
-
-		//reqDump := "POST Request received: " + c.Param("monerodendpoint") + "\n" + string(requestBody)
 		reqDump := time.Now().Format(time.RFC3339) + " POST Request received: " + c.Param("monerodendpoint")
 
 		if err != nil {

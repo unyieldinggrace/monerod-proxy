@@ -35,6 +35,11 @@ func (nodeProvider *NodeProvider) GetAnyNodesAvailable() bool {
 
 func (nodeProvider *NodeProvider) CheckNodeHealth() {
 	for i := 0; i < len(nodeProvider.Nodes); i++ {
+		if nodeProvider.Nodes[i].PassedLastCheck {
+			continue
+		}
+
+		// Should really abstract away ExecuteGETRequest behind an interface so that it can be injected with a mock for a unit test
 		_, statusCode, err := httpclient.ExecuteGETRequest(nodeProvider.Nodes[i].URL + "get_height")
 
 		if err != nil {
@@ -92,6 +97,7 @@ func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
 func (nodeProvider *NodeProvider) ReportNodeConnectionFailure() {
 	fmt.Println("Detected node failure:\t", nodeProvider.GetBaseURL())
 
+	nodeProvider.Nodes[nodeProvider.SelectedNodeIndex].PassedLastCheck = false
 	nodeProvider.CheckNodeHealth()
 
 	if nodeProvider.GetAnyNodesAvailable() {
