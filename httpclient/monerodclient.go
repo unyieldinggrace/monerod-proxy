@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func ExecuteGETRequest(URL string) (string, int, error) {
@@ -20,7 +22,7 @@ func ExecutePOSTRequest(URL string, body []byte) (string, int, error) {
 func executeRequest(req *http.Request) (string, int, error) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		return "Monerod-proxy encountered an error connecting to a backend node. Please re-try your request and monerod-proxy will attempt to use an alternate node for fulfillment.\n", 500, err
 	}
 

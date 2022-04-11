@@ -2,8 +2,8 @@ package nodemanagement
 
 import (
 	"digitalcashtools/monerod-proxy/httpclient"
-	"fmt"
 
+	"github.com/labstack/gommon/log"
 	"gopkg.in/ini.v1"
 )
 
@@ -72,10 +72,10 @@ func (nodeProvider *NodeProvider) CheckNodeHealth() {
 func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
 	nodes := []NodeInfo{}
 	nodeURLs := cfg.Section("").Key("node").Strings(",")
-	fmt.Println(nodeURLs)
+	log.Info(nodeURLs)
 
 	for i := 0; i < len(nodeURLs); i++ {
-		fmt.Println("Adding URL: " + nodeURLs[i])
+		log.Debug("Adding URL: " + nodeURLs[i])
 
 		nodeInfo := NodeInfo{
 			URL:             nodeURLs[i],
@@ -95,14 +95,14 @@ func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
 }
 
 func (nodeProvider *NodeProvider) ReportNodeConnectionFailure() {
-	fmt.Println("Detected node failure:\t", nodeProvider.GetBaseURL())
+	log.Info("Detected node failure:\t", nodeProvider.GetBaseURL())
 
 	nodeProvider.Nodes[nodeProvider.SelectedNodeIndex].PassedLastCheck = false
 	nodeProvider.CheckNodeHealth()
 
 	if nodeProvider.GetAnyNodesAvailable() {
-		fmt.Println("Switched to node:\t", nodeProvider.GetBaseURL())
+		log.Info("Switched to node:\t", nodeProvider.GetBaseURL())
 	} else {
-		fmt.Println("All nodes failed health check, no nodes available.")
+		log.Info("All nodes failed health check, no nodes available.")
 	}
 }

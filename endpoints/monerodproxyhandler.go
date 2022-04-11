@@ -4,12 +4,12 @@ import (
 	"digitalcashtools/monerod-proxy/httpclient"
 	"digitalcashtools/monerod-proxy/nodemanagement"
 
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	log "github.com/sirupsen/logrus"
 )
 
 func ConfigureMonerodProxyHandler(e *echo.Echo, nodeProvider nodemanagement.INodeProvider) {
@@ -24,7 +24,7 @@ func ConfigureMonerodProxyHandler(e *echo.Echo, nodeProvider nodemanagement.INod
 			nodeProvider.ReportNodeConnectionFailure()
 		}
 
-		fmt.Println(time.Now().Format(time.RFC3339)+" GET Request Received: "+c.Param("monerodendpoint")+"\tResponse Code: ", httpStatus)
+		log.Debug(time.Now().Format(time.RFC3339), " ", c.RealIP(), " GET Request Received: ", c.Param("monerodendpoint"), "\tResponse Code: ", httpStatus)
 		return c.String(httpStatus, resp)
 	})
 
@@ -34,10 +34,10 @@ func ConfigureMonerodProxyHandler(e *echo.Echo, nodeProvider nodemanagement.INod
 		}
 
 		requestBody, err := ioutil.ReadAll(c.Request().Body)
-		reqDump := time.Now().Format(time.RFC3339) + " POST Request received: " + c.Param("monerodendpoint")
+		reqDump := time.Now().Format(time.RFC3339) + " " + c.RealIP() + " POST Request received: " + c.Param("monerodendpoint")
 
 		if err != nil {
-			fmt.Println(err)
+			log.Debug(err)
 			return c.String(http.StatusBadRequest, reqDump)
 		}
 
@@ -47,7 +47,7 @@ func ConfigureMonerodProxyHandler(e *echo.Echo, nodeProvider nodemanagement.INod
 			nodeProvider.ReportNodeConnectionFailure()
 		}
 
-		fmt.Println(reqDump, "\tResponse Code: ", httpStatus)
+		log.Debug(reqDump, "\tResponse Code: ", httpStatus)
 		return c.String(httpStatus, resp)
 	})
 }

@@ -3,10 +3,10 @@ package main
 import (
 	"digitalcashtools/monerod-proxy/endpoints"
 	"digitalcashtools/monerod-proxy/nodemanagement"
-	"fmt"
 	"net/http"
-	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/labstack/echo/v4"
 	"gopkg.in/ini.v1"
@@ -15,12 +15,27 @@ import (
 func main() {
 	cfg, err := ini.Load("config.ini")
 	if err != nil {
-		fmt.Printf("Failed to read config.ini")
-		os.Exit(1)
+		log.Fatal("Failed to read config.ini")
+	}
+
+	logLevel := cfg.Section("").Key("log_level").Value()
+	switch logLevel {
+	case "Trace":
+		log.SetLevel(log.TraceLevel)
+	case "Debug":
+		log.SetLevel(log.DebugLevel)
+	case "Info":
+		log.SetLevel(log.InfoLevel)
+	case "Warn":
+		log.SetLevel(log.WarnLevel)
+	case "Error":
+		log.SetLevel(log.ErrorLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
+		log.Info("Log level from config not recognised, defaulting to Info level.")
 	}
 
 	http_port := cfg.Section("").Key("http_port").Value()
-	fmt.Println("Port from config: ", http_port)
 
 	e := echo.New()
 	endpoints.ConfigurePing(e)
@@ -31,21 +46,21 @@ func main() {
 	setUpNodeHealthCheckTicker(cfg, nodeProvider)
 
 	nodeProvider.CheckNodeHealth()
-	fmt.Println("Selected node: ", nodeProvider.GetBaseURL())
+	log.Info("Selected node: ", nodeProvider.GetBaseURL())
 
 	e.GET("*", func(c echo.Context) error {
 		reqDump := time.Now().Format(time.RFC3339) + " GET Request received: " + c.Path() + c.QueryString()
-		fmt.Println(reqDump)
+		log.Debug(reqDump)
 		return c.String(http.StatusOK, reqDump)
 	})
 
 	e.POST("*", func(c echo.Context) error {
 		reqDump := time.Now().Format(time.RFC3339) + " POST Request received: " + c.Path() + c.QueryString()
-		fmt.Println(reqDump)
+		log.Debug(reqDump)
 		return c.String(http.StatusOK, reqDump)
 	})
 
-	fmt.Println("Server running, test by visiting localhost:", http_port, "/ping")
+	log.Info("Server running, test by visiting localhost:", http_port, "/ping")
 
 	// TODO: Add TLS support
 	e.Logger.Fatal(e.Start(":" + http_port))
@@ -57,14 +72,14 @@ func setUpNodeHealthCheckTicker(cfg *ini.File, nodeProvider nodemanagement.INode
 		secondsBetweenHealthChecks = 10 * 60
 	}
 
-	fmt.Println("Performing node health check every", secondsBetweenHealthChecks, "seconds")
+	log.Info("Performing node health check every", secondsBetweenHealthChecks, "seconds")
 
 	healthCheckTicker := time.NewTicker(time.Duration(secondsBetweenHealthChecks) * time.Second)
 
 	go func() {
 		for {
 			<-healthCheckTicker.C
-			fmt.Println("Checking node health...")
+			log.Debug("Checking node health...")
 
 			previousNode := nodeProvider.GetBaseURL()
 
@@ -73,7 +88,7 @@ func setUpNodeHealthCheckTicker(cfg *ini.File, nodeProvider nodemanagement.INode
 			newSelectedNode := nodeProvider.GetBaseURL()
 
 			if newSelectedNode != previousNode {
-				fmt.Println("Switched to new node:", newSelectedNode)
+				log.Info("Switched to new node:", newSelectedNode)
 			}
 		}
 	}()
