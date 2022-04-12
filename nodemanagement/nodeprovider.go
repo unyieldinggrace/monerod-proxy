@@ -3,7 +3,7 @@ package nodemanagement
 import (
 	"digitalcashtools/monerod-proxy/httpclient"
 
-	"github.com/labstack/gommon/log"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 )
 
@@ -42,7 +42,6 @@ func (nodeProvider *NodeProvider) CheckNodeHealth() {
 			continue
 		}
 
-		// Should really abstract away ExecuteGETRequest behind an interface so that it can be injected with a mock for a unit test
 		_, statusCode, err := nodeProvider.executeGETRequestFunc(nodeProvider.Nodes[i].URL + "get_height")
 
 		if err != nil {
@@ -102,13 +101,13 @@ func (nodeProvider *NodeProvider) AddNode(URL string) {
 }
 
 func (nodeProvider *NodeProvider) ReportNodeConnectionFailure() {
-	log.Info("Detected node failure:\t", nodeProvider.GetBaseURL())
+	log.Info("Detected node failure: " + nodeProvider.GetBaseURL())
 
 	nodeProvider.Nodes[nodeProvider.SelectedNodeIndex].PassedLastCheck = false
 	nodeProvider.CheckNodeHealth()
 
 	if nodeProvider.GetAnyNodesAvailable() {
-		log.Info("Switched to node:\t", nodeProvider.GetBaseURL())
+		log.Info("Switched to node: " + nodeProvider.GetBaseURL())
 	} else {
 		log.Info("All nodes failed health check, no nodes available.")
 	}

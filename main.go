@@ -35,7 +35,7 @@ func main() {
 		log.Info("Log level from config not recognised, defaulting to Info level.")
 	}
 
-	http_port := cfg.Section("").Key("http_port").Value()
+	httpPort := cfg.Section("").Key("http_port").Value()
 
 	e := echo.New()
 	endpoints.ConfigurePing(e)
@@ -60,10 +60,10 @@ func main() {
 		return c.String(http.StatusOK, reqDump)
 	})
 
-	log.Info("Server running, test by visiting localhost:", http_port, "/ping")
+	log.Info("Server running, test by visiting localhost:", httpPort, "/ping")
 
 	// TODO: Add TLS support
-	e.Logger.Fatal(e.Start(":" + http_port))
+	e.Logger.Fatal(e.Start(":" + httpPort))
 }
 
 func setUpNodeHealthCheckTicker(cfg *ini.File, nodeProvider nodemanagement.INodeProvider) {
