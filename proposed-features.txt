@@ -1,0 +1,6 @@
+* Add TLS support for encrypted traffic.
+* Cache data when response is deterministic from request (e.g. request block by hash, response is cached). Takes some load of backend nodes, especially if they are public nodes.
+* Add a websocket interface to let clients (e.g. cash register app) listen for txns arriving in the mempool.
+* Add support for rate limiting.
+* Add support for tiered access, so a user could pay an amount of XMR to remove rate limiting for a given access key. Allows node operators to easily monetize node access.
+* Add support for more complex load-balancing between available nodes (instead of just always forwarding request to highest-priority node that is available).
