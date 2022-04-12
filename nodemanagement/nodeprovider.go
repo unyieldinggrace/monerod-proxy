@@ -19,10 +19,13 @@ type NodeInfo struct {
 	PassedLastCheck bool
 }
 
+type ExecuteGETRequestFunc func(string) (string, int, error)
+
 type NodeProvider struct {
-	SelectedNodeIndex int
-	Nodes             []NodeInfo
-	AnyNodesAvailable bool
+	SelectedNodeIndex     int
+	Nodes                 []NodeInfo
+	AnyNodesAvailable     bool
+	executeGETRequestFunc ExecuteGETRequestFunc
 }
 
 func (nodeProvider *NodeProvider) GetBaseURL() string {
@@ -40,7 +43,7 @@ func (nodeProvider *NodeProvider) CheckNodeHealth() {
 		}
 
 		// Should really abstract away ExecuteGETRequest behind an interface so that it can be injected with a mock for a unit test
-		_, statusCode, err := httpclient.ExecuteGETRequest(nodeProvider.Nodes[i].URL + "get_height")
+		_, statusCode, err := nodeProvider.executeGETRequestFunc(nodeProvider.Nodes[i].URL + "get_height")
 
 		if err != nil {
 			nodeProvider.Nodes[i].PassedLastCheck = false
@@ -74,24 +77,28 @@ func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
 	nodeURLs := cfg.Section("").Key("node").Strings(",")
 	log.Info(nodeURLs)
 
-	for i := 0; i < len(nodeURLs); i++ {
-		log.Debug("Adding URL: " + nodeURLs[i])
-
-		nodeInfo := NodeInfo{
-			URL:             nodeURLs[i],
-			PassedLastCheck: true,
-		}
-
-		nodes = append(nodes, nodeInfo)
+	nodeProvider := &NodeProvider{
+		SelectedNodeIndex:     0,
+		Nodes:                 nodes,
+		AnyNodesAvailable:     false,
+		executeGETRequestFunc: httpclient.ExecuteGETRequest,
 	}
 
-	nodeProvider := &NodeProvider{
-		SelectedNodeIndex: 0,
-		Nodes:             nodes,
-		AnyNodesAvailable: false,
+	for i := 0; i < len(nodeURLs); i++ {
+		log.Debug("Adding URL: " + nodeURLs[i])
+		nodeProvider.AddNode(nodeURLs[i])
 	}
 
 	return nodeProvider
+}
+
+func (nodeProvider *NodeProvider) AddNode(URL string) {
+	nodeInfo := NodeInfo{
+		URL:             URL,
+		PassedLastCheck: true,
+	}
+
+	nodeProvider.Nodes = append(nodeProvider.Nodes, nodeInfo)
 }
 
 func (nodeProvider *NodeProvider) ReportNodeConnectionFailure() {
