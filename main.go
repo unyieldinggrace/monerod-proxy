@@ -3,6 +3,7 @@ package main
 import (
 	"digitalcashtools/monerod-proxy/endpoints"
 	"digitalcashtools/monerod-proxy/nodemanagement"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -72,7 +73,7 @@ func setUpNodeHealthCheckTicker(cfg *ini.File, nodeProvider nodemanagement.INode
 		secondsBetweenHealthChecks = 10 * 60
 	}
 
-	log.Info("Performing node health check every", secondsBetweenHealthChecks, "seconds")
+	log.Info(fmt.Sprintf("Performing node health check every %d seconds.", secondsBetweenHealthChecks))
 
 	healthCheckTicker := time.NewTicker(time.Duration(secondsBetweenHealthChecks) * time.Second)
 
