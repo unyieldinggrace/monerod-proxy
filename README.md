@@ -40,3 +40,7 @@ But there is potential to build more features into the proxy to power more appli
 I would also like to see the proxy provide a WebSocket interface that could be used by a point-of-sale app on a mobile device to get notified of transactions arriving in the mempool. The mobile device could then scan the transactions as they arrive and see if they match the view-key of the merchant. This would make it easy to build a point-of-sale app that just needs a view-key and can do basically-instant scanning of the mempool for a payment that was just requested, making the checkout process much smoother.
 
 But all of that is down the road. I wanted to learn golang, and I wanted a proxy to automatically re-route traffic to another monerod instance if the one I was using went down. I've solved those problems by making this small app.
+
+### Tips ###
+If this app is useful to you, feel free to leave a tip.
+XMR Tip Jar: 87U3RX6JmHiJfWxGy1nRi1EChpuWXowCqChTAUDh8j6hc9Eg928JreVgJ8DEtW8C97W3MYuh8hKzoHxkpSY4CS7f8NPSHnK
