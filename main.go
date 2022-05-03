@@ -37,11 +37,11 @@ func main() {
 	}
 
 	httpPort := cfg.Section("").Key("http_port").Value()
+	nodeProvider := nodemanagement.LoadNodeProviderFromConfig(cfg)
 
 	e := echo.New()
 	endpoints.ConfigurePing(e)
-
-	nodeProvider := nodemanagement.LoadNodeProviderFromConfig(cfg)
+	endpoints.ConfigureAdminEndpoints(e, nodeProvider)
 	endpoints.ConfigureMonerodProxyHandler(e, nodeProvider)
 
 	setUpNodeHealthCheckTicker(cfg, nodeProvider)

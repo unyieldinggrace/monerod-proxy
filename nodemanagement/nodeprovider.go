@@ -12,11 +12,14 @@ type INodeProvider interface {
 	GetAnyNodesAvailable() bool
 	ReportNodeConnectionFailure()
 	CheckNodeHealth()
+	GetAvailableNodes() []string
+	SetNodeEnabled(NodeURL string, enabled bool) bool
 }
 
 type NodeInfo struct {
 	URL             string
 	PassedLastCheck bool
+	Enabled         bool
 }
 
 type ExecuteGETRequestFunc func(string) (string, int, error)
@@ -36,9 +39,25 @@ func (nodeProvider *NodeProvider) GetAnyNodesAvailable() bool {
 	return nodeProvider.AnyNodesAvailable
 }
 
+func (nodeProvider *NodeProvider) GetAvailableNodes() []string {
+	result := []string{}
+
+	for i := 0; i < len(nodeProvider.Nodes); i++ {
+		if nodeProvider.Nodes[i].PassedLastCheck && nodeProvider.Nodes[i].Enabled {
+			result = append(result, nodeProvider.Nodes[i].URL)
+		}
+	}
+
+	return result
+}
+
 func (nodeProvider *NodeProvider) CheckNodeHealth() {
 	for i := 0; i < len(nodeProvider.Nodes); i++ {
 		if nodeProvider.Nodes[i].PassedLastCheck {
+			continue
+		}
+
+		if !nodeProvider.Nodes[i].Enabled {
 			continue
 		}
 
@@ -60,7 +79,7 @@ func (nodeProvider *NodeProvider) CheckNodeHealth() {
 	availableNodeFound := false
 	chosenNodeIndex := 0
 	for i := 0; i < len(nodeProvider.Nodes); i++ {
-		if nodeProvider.Nodes[i].PassedLastCheck {
+		if nodeProvider.Nodes[i].PassedLastCheck && nodeProvider.Nodes[i].Enabled {
 			chosenNodeIndex = i
 			availableNodeFound = true
 			break
@@ -95,6 +114,7 @@ func (nodeProvider *NodeProvider) AddNode(URL string) {
 	nodeInfo := NodeInfo{
 		URL:             URL,
 		PassedLastCheck: true,
+		Enabled:         true,
 	}
 
 	nodeProvider.Nodes = append(nodeProvider.Nodes, nodeInfo)
@@ -111,4 +131,17 @@ func (nodeProvider *NodeProvider) ReportNodeConnectionFailure() {
 	} else {
 		log.Info("All nodes failed health check, no nodes available.")
 	}
+}
+
+func (nodeProvider *NodeProvider) SetNodeEnabled(NodeURL string, enabled bool) bool {
+	for i := 0; i < len(nodeProvider.Nodes); i++ {
+		if nodeProvider.Nodes[i].URL == NodeURL {
+			nodeProvider.Nodes[i].Enabled = enabled
+			log.Info("Disabling node: " + NodeURL)
+			return true
+		}
+	}
+
+	log.Error("No node found with URL", NodeURL)
+	return false
 }

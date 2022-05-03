@@ -96,6 +96,23 @@ func TestWhenCheckNodeHealthIsCalledAndCurrentNodeIsFailingThenSelectedNodeIndex
 	}
 }
 
+func TestWhenCheckNodeHealthIsCalledAndCurrentNodeIsDisabledThenSelectedNodeIndexIsShiftedToWorkingNode(t *testing.T) {
+	disabledNode := "http://mynode.com:18081/"
+	workingNode := "http://someothernode.com:18081/"
+
+	nodeProvider := getBasicNodeProvider()
+	nodeProvider.AddNode(disabledNode)
+	nodeProvider.SetNodeEnabled(disabledNode, false)
+	nodeProvider.AddNode(workingNode)
+	nodeProvider.SelectedNodeIndex = 0
+
+	nodeProvider.CheckNodeHealth()
+	result := nodeProvider.GetBaseURL()
+	if result != workingNode {
+		t.Errorf("Selected node should be %s, instead got %s", workingNode, result)
+	}
+}
+
 func TestWhenCheckNodeHealthIsCalledAndFailingNodeNowSucceedsThenSelectedNodeIndexIsUnchanged(t *testing.T) {
 	restoredNode := "http://mynode.com:18081/"
 	workingNode := "http://someothernode.com:18081/"
@@ -132,6 +149,72 @@ func TestWhenNodeFailureIsReportedThenNodeHealthGetsChecked(t *testing.T) {
 
 	if !nodeHealthChecked {
 		t.Errorf("Expected HTTP requests to check node health, but none occurred.")
+	}
+}
+
+func TestWhenNodeIsDisabledThenNodeHealthCheckIsSkippedForThatNode(t *testing.T) {
+	healthCheckCalledForDisabledNode := false
+
+	httpRequestFunc := func(URL string) (string, int, error) {
+		healthCheckCalledForDisabledNode = true
+		return "test", 500, errors.New("test error")
+	}
+
+	nodeProvider := getNodeProviderWithHTTPFunc(httpRequestFunc)
+	testNode := "http://mynode.com:18081/"
+	nodeProvider.AddNode(testNode)
+	nodeProvider.Nodes[0].PassedLastCheck = false
+
+	nodeProvider.SetNodeEnabled(testNode, false)
+
+	nodeProvider.CheckNodeHealth()
+	if healthCheckCalledForDisabledNode {
+		t.Errorf("Expected health check to be skipped for disabled node.")
+	}
+}
+
+func TestWhenNodeIsReEnabledThenNodeHealthCheckIsPerformedForThatNode(t *testing.T) {
+	healthCheckCalledForDisabledNode := false
+
+	httpRequestFunc := func(URL string) (string, int, error) {
+		healthCheckCalledForDisabledNode = true
+		return "test", 500, errors.New("test error")
+	}
+
+	nodeProvider := getNodeProviderWithHTTPFunc(httpRequestFunc)
+	testNode := "http://mynode.com:18081/"
+	nodeProvider.AddNode(testNode)
+	nodeProvider.Nodes[0].PassedLastCheck = false
+
+	nodeProvider.SetNodeEnabled(testNode, false)
+	nodeProvider.SetNodeEnabled(testNode, true)
+
+	nodeProvider.CheckNodeHealth()
+	if !healthCheckCalledForDisabledNode {
+		t.Errorf("Expected health check to be performed for enabled node.")
+	}
+}
+
+func TestWhenGetAvailableNodesIsCalledThenReturnsNodesThatAreEnabledAndPassedLastCheck(t *testing.T) {
+	nodeProvider := getBasicNodeProvider()
+	failedNode := "http://mynode.com:18081/"
+	nodeProvider.AddNode(failedNode)
+	nodeProvider.Nodes[0].PassedLastCheck = false
+
+	disabledNode := "http://othernode.com:18081/"
+	nodeProvider.AddNode(disabledNode)
+	nodeProvider.SetNodeEnabled(disabledNode, false)
+
+	availableNode := "http://availablenode.com:18081/"
+	nodeProvider.AddNode(availableNode)
+
+	availableNodes := nodeProvider.GetAvailableNodes()
+	if len(availableNodes) != 1 {
+		t.Errorf("Should only be one node available.")
+	}
+
+	if availableNodes[0] != availableNode {
+		t.Errorf("Wrong node returned by GetAvailableNodes.")
 	}
 }
 
