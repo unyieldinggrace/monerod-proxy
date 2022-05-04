@@ -22,11 +22,11 @@ type SetNodeEnabledRequestBody struct {
 }
 
 func ConfigureAdminEndpoints(e *echo.Echo, nodeProvider nodemanagement.INodeProvider) {
-	e.GET("/proxy/status", func(c echo.Context) error {
+	e.GET("/proxy/api/status", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, getStatusResponse(nodeProvider))
 	})
 
-	e.POST("/proxy/setnodeenabled", func(c echo.Context) error {
+	e.POST("/proxy/api/setnodeenabled", func(c echo.Context) error {
 		requestBody, err := ioutil.ReadAll(c.Request().Body)
 		reqDump := time.Now().Format(time.RFC3339) + " " + c.RealIP() + " POST Request received: disablenode"
 
@@ -46,6 +46,7 @@ func ConfigureAdminEndpoints(e *echo.Echo, nodeProvider nodemanagement.INodeProv
 			return c.String(http.StatusBadRequest, "No node found with URL "+requestStruct.NodeURL)
 		}
 
+		nodeProvider.CheckNodeHealth()
 		return c.JSON(http.StatusOK, getStatusResponse(nodeProvider))
 	})
 }

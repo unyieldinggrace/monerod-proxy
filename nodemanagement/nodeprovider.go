@@ -137,7 +137,7 @@ func (nodeProvider *NodeProvider) SetNodeEnabled(NodeURL string, enabled bool) b
 	for i := 0; i < len(nodeProvider.Nodes); i++ {
 		if nodeProvider.Nodes[i].URL == NodeURL {
 			nodeProvider.Nodes[i].Enabled = enabled
-			log.Info("Disabling node: " + NodeURL)
+			log.Info("Setting node [", NodeURL, "] to enabled = ", enabled)
 			return true
 		}
 	}

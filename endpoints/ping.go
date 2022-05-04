@@ -11,7 +11,7 @@ type PingResponse struct {
 }
 
 func ConfigurePing(e *echo.Echo) {
-	e.GET("/proxy/ping", func(c echo.Context) error {
+	e.GET("/proxy/api/ping", func(c echo.Context) error {
 		pingResponse := &PingResponse{Message: "pong"}
 		return c.JSON(http.StatusOK, pingResponse)
 	})
