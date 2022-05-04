@@ -27,8 +27,6 @@ type PasswordHolder struct {
 
 const adminPasswordRejectedMessage = "Admin password rejected."
 
-// NEED TO ADD SECURITY TO THESE ENDPOINTS
-
 func ConfigureAdminEndpoints(e *echo.Echo, passwordChecker security.IPasswordChecker, nodeProvider nodemanagement.INodeProvider) {
 	e.GET("/proxy/api/status", func(c echo.Context) error {
 		adminPasswordFound, err := checkAdminPassword(c, passwordChecker)
