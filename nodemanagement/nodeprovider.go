@@ -90,7 +90,7 @@ func (nodeProvider *NodeProvider) CheckNodeHealth() {
 	nodeProvider.AnyNodesAvailable = availableNodeFound
 }
 
-func LoadNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
+func CreateNodeProviderFromConfig(cfg *ini.File) *NodeProvider {
 	nodes := []NodeInfo{}
 	nodeURLs := cfg.Section("").Key("node").Strings(",")
 	log.Info(nodeURLs)

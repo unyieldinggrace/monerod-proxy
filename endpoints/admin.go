@@ -2,10 +2,10 @@ package endpoints
 
 import (
 	"digitalcashtools/monerod-proxy/nodemanagement"
+	"digitalcashtools/monerod-proxy/security"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	log "github.com/sirupsen/logrus"
@@ -21,18 +21,42 @@ type SetNodeEnabledRequestBody struct {
 	Enabled bool   `json:"Enabled"`
 }
 
-func ConfigureAdminEndpoints(e *echo.Echo, nodeProvider nodemanagement.INodeProvider) {
+type PasswordHolder struct {
+	Password string `json:"Password"`
+}
+
+const adminPasswordRejectedMessage = "Admin password rejected."
+
+// NEED TO ADD SECURITY TO THESE ENDPOINTS
+
+func ConfigureAdminEndpoints(e *echo.Echo, passwordChecker security.IPasswordChecker, nodeProvider nodemanagement.INodeProvider) {
 	e.GET("/proxy/api/status", func(c echo.Context) error {
+		adminPasswordFound, err := checkAdminPassword(c, passwordChecker)
+		if err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+
+		if !adminPasswordFound {
+			return c.String(http.StatusForbidden, adminPasswordRejectedMessage)
+		}
+
 		return c.JSON(http.StatusOK, getStatusResponse(nodeProvider))
 	})
 
 	e.POST("/proxy/api/setnodeenabled", func(c echo.Context) error {
-		requestBody, err := ioutil.ReadAll(c.Request().Body)
-		reqDump := time.Now().Format(time.RFC3339) + " " + c.RealIP() + " POST Request received: disablenode"
+		adminPasswordFound, err := checkAdminPassword(c, passwordChecker)
+		if err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
 
+		if !adminPasswordFound {
+			return c.String(http.StatusForbidden, adminPasswordRejectedMessage)
+		}
+
+		requestBody, err := ioutil.ReadAll(c.Request().Body)
 		if err != nil {
 			log.Debug(err)
-			return c.String(http.StatusBadRequest, reqDump)
+			return c.String(http.StatusBadRequest, err.Error())
 		}
 
 		var requestStruct SetNodeEnabledRequestBody
@@ -56,4 +80,19 @@ func getStatusResponse(nodeProvider nodemanagement.INodeProvider) *StatusRespons
 		CurrentNode:    nodeProvider.GetBaseURL(),
 		AvailableNodes: nodeProvider.GetAvailableNodes(),
 	}
+}
+
+func checkAdminPassword(c echo.Context, passwordChecker security.IPasswordChecker) (bool, error) {
+	requestBody, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		return false, err
+	}
+
+	var passwordFromBody PasswordHolder
+	err = json.Unmarshal(requestBody, &passwordFromBody)
+	if err != nil {
+		return false, err
+	}
+
+	return passwordChecker.CheckAdminPassword(passwordFromBody.Password), nil
 }

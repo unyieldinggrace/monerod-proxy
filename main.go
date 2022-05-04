@@ -3,6 +3,7 @@ package main
 import (
 	"digitalcashtools/monerod-proxy/endpoints"
 	"digitalcashtools/monerod-proxy/nodemanagement"
+	"digitalcashtools/monerod-proxy/security"
 	"fmt"
 	"net/http"
 	"time"
@@ -37,11 +38,12 @@ func main() {
 	}
 
 	httpPort := cfg.Section("").Key("http_port").Value()
-	nodeProvider := nodemanagement.LoadNodeProviderFromConfig(cfg)
+	nodeProvider := nodemanagement.CreateNodeProviderFromConfig(cfg)
+	passwordChecker := security.CreatePasswordCheckerFromConfig(cfg)
 
 	e := echo.New()
 	endpoints.ConfigurePing(e)
-	endpoints.ConfigureAdminEndpoints(e, nodeProvider)
+	endpoints.ConfigureAdminEndpoints(e, passwordChecker, nodeProvider)
 	endpoints.ConfigureMonerodProxyHandler(e, nodeProvider)
 
 	setUpNodeHealthCheckTicker(cfg, nodeProvider)
