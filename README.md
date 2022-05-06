@@ -21,6 +21,22 @@ These are some useful features that could be added in the future. If you need th
 
 Clone the repo and run `./build.sh` to build the application inside the `bin` directory. You can run it simply by running `bin/monerod-proxy`. It will load config from the `config.ini` file, so edit that file before running the applcation.
 
+To set the admin password, you can first generate a bcrypt hash by doing a POST request to the proxy:
+
+```
+curl http://localhost:18081/proxy/api/generatepasswordhash -d '{"Password":"mysupersecurepassword"}' -H 'Content-Type: application/json'
+```
+Put the returned hash in the config.ini file. Then you can use your new password to run other administrator requests, such as checking the status:
+```
+curl http://localhost:18081/proxy/api/status -d '{"Password":"mysupersecurepassword"}' -H 'Content-Type: application/json'
+```
+Or disabling/re-enabling a node for maintenance:
+```
+curl http://localhost:18081/proxy/api/setnodeenabled -d '{"Password":"mysupersecurepassword","NodeURL":"http://mynode.com:18081/","Enabled":false}' -H 'Content-Type: application/json'
+```
+
+Remember that monerod-proxy doesn't support HTTPS yet, so best to only run these commands from localhost.
+
 ## Motivation
 
 Let's say you want to accept XMR for payments on your website. The most obvious way to do this is to run an instance of `monero-wallet-rpc` with a view-only wallet which your web application can use to generate payment addresses and watch for incoming payments.
