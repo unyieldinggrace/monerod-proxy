@@ -7,10 +7,7 @@ import (
 
 type IPasswordChecker interface {
 	CheckAdminPassword(password string) bool
-}
-
-type IPasswordHashGenerator interface {
-	GeneratePasswordHash(password string) string
+	GeneratePasswordHash(password string) (string, error)
 }
 
 type PasswordChecker struct {
