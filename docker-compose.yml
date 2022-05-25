@@ -1,0 +1,78 @@
+version: "3.7"
+
+services:
+  monerod-proxy:
+    container_name: monerod-proxy
+    build:
+      context: ./
+    image: "monerod-proxy:master"
+    sysctls:
+      net.core.somaxconn: 8128
+    volumes:
+      - "./config.docker.ini:/app/config.ini"
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.monerod-proxy.rule=(Host(`${proxy_DOMAIN}`) && PathPrefix(`/ws`))"
+      - "traefik.http.routers.monerod-proxy.rule=(Host(`${PROXY_DOMAIN}`))"
+      - "traefik.http.routers.monerod-proxy.entrypoints=websecure"
+      - "traefik.http.routers.monerod-proxy.tls.certresolver=le"
+      - "traefik.http.routers.monerod-proxy.service=monerod-proxy"
+      - "traefik.http.services.monerod-proxy.loadbalancer.server.port=${PROXY_PORT}"
+      - "traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto = https"
+      - "traefik.http.middlewares.corsheader.headers.accessControlAllowOriginList=*"
+      - "traefik.http.routers.monerod-proxy.middlewares=corsheader"
+      # - "traefik.http.routers.monerod-proxy.middlewares=wss-stripprefix"
+      # - "traefik.http.middlewares.wss-stripprefix.stripprefix.prefixes=/wss"
+      # - "traefik.http.services.monerod-proxy.loadbalancer.sticky.cookie=true"
+      # - "traefik.http.services.monerod-proxy.loadbalancer.sticky.cookie.name=io"
+      # - "traefik.http.services.monerod-proxy.loadbalancer.sticky.cookie.httponly=true"
+      # - "traefik.http.services.monerod-proxy.loadbalancer.sticky.cookie.secure=true"
+      # - "traefik.http.services.monerod-proxy.loadbalancer.sticky.cookie.samesite=io"
+
+  traefik:
+    image: traefik:${TRAEFIK_TAG}
+    container_name: traefik
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    command:
+      - "--log.level=${TRAEFIK_LOGLEVEL}"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL}"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+    restart: always
+  monerod:
+    container_name: monerod
+    image: sethsimmons/simple-monerod:${MONEROD_TAG}
+    command: >-
+      --restricted-rpc --public-node --no-igd --no-zmq
+      --enable-dns-blocklist --rpc-restricted-bind-ip=0.0.0.0 --rpc-restricted-bind-port=18089 --confirm-external-bind
+      --prune-blockchain
+    ports:
+      - "18080:18080" # Expose P2P port
+      - "18089"
+    volumes:
+      - "monerod-data:/home/monero/.bitmonero"
+    restart: unless-stopped
+
+  # Uncomment for automatic updates
+  # watchtower:
+  #   image: containrrr/watchtower
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   labels:
+  #     - com.centurylinklabs.watchtower.enable="false"
+  #   command: --interval 360 --include-stopped
+volumes:
+  monerod-data: {}
